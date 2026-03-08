@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>智影链 Smart Shadow</title>
+
+    <!-- 外部依赖：图标/动画/DOM/弹窗/Three/Vanta 背景（CDN 加载） -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.net.min.js"></script>
+
+    <style>
+      /* 主题变量：统一管理主色/辅色/玻璃拟态与边框透明度 */
+      :root {
+        --primary: #00f2ea;
+        --secondary: #ff0050;
+        --ai-color: #ff9f43;
+        --glass: rgba(16, 20, 30, 0.85);
+        --border: rgba(255, 255, 255, 0.15);
+      }
+
+      /* 全局暗色背景：仅允许横向不滚动，纵向由页面自然滚动 */
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Roboto, sans-serif;
+        background-color: #0b0e14;
+        color: #fff;
+        overflow-x: hidden;
+      }
+
+      /* Vanta 背景容器：固定铺满并置于底层 */
+      #bg-canvas {
+        position: fixed;
+        z-index: -1;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* 顶部导航：fixed + blur，避免滚动时遮挡内容（paddingTop 由 view-home 提供） */
+      .navbar {
+        padding: 15px 40px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--border);
+        position: fixed;
+        top: 0;
+        width: 100%;
+        z-index: 999;
+        box-sizing: border-box;
+      }
+      .logo {
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        cursor: pointer;
+      }
+      .logo span {
+        color: var(--primary);
+      }
+      .nav-links {
+        display: flex;
+        gap: 20px;
+      }
+      .nav-item {
+        color: #ccc;
+        text-decoration: none;
+        font-size: 14px;
+        cursor: pointer;
+        transition: 0.3s;
+      }
+      .nav-item:hover {
+        color: var(--primary);
+        text-shadow: 0 0 8px var(--primary);
+      }
+
+      /* 首页：为 fixed navbar 预留顶部空间 */
+      #view-home {
+        padding-top: 80px;
+        min-height: 100vh;
+      }
+
+      /* 首屏展示：标题 + 两个功能入口卡片 */
+      .hero-section {
+        height: 85vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+      .hero-title {
+        font-size: 48px;
+        font-weight: 900;
+        margin-bottom: 10px;
+        text-align: center;
+        text-shadow: 0 0 20px rgba(0, 242, 234, 0.4);
+      }
+      .card-container {
+        display: flex;
+        gap: 40px;
+        margin-top: 40px;
+      }
+
+      /* 功能卡片：hover 仅改变视觉，不影响结构（用于打开全屏面板） */
+      .nav-card {
+        width: 280px;
+        height: 360px;
+        background: var(--glass);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        transition: 0.4s;
+        backdrop-filter: blur(10px);
+        position: relative;
+        overflow: hidden;
+      }
+      .nav-card:hover {
+        transform: translateY(-10px);
+        border-color: #fff;
+      }
+      .card-blue:hover {
+        box-shadow: 0 0 40px rgba(0, 242, 234, 0.3);
+      }
+      .card-blue i {
+        color: var(--primary);
+        font-size: 50px;
+        margin-bottom: 20px;
+      }
+      .card-red:hover {
+        box-shadow: 0 0 40px rgba(255, 0, 80, 0.3);
+      }
+      .card-red i {
+        color: var(--secondary);
+        font-size: 50px;
+        margin-bottom: 20px;
+      }
+      .nav-card h3 {
+        font-size: 20px;
+        margin: 15px 0;
+      }
+      .nav-card p {
+        font-size: 13px;
+        color: #aaa;
+        text-align: center;
+        width: 80%;
+      }
+
+      /* 介绍区：展示项目技术栈 */
+      .intro-section {
+        background: rgba(0, 0, 0, 0.8);
+        padding: 80px 15%;
+        border-top: 1px solid var(--border);
+      }
+      .tech-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 30px;
+        margin-top: 30px;
+      }
+      .tech-item {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 25px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+      }
+
+      /* 全屏功能视图：默认不可点击/透明，通过 view-active 切换可见 */
+      .fullscreen-view {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(15px);
+        z-index: 1000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        pointer-events: none;
+        transform: scale(0.95);
+        transition: 0.4s;
+      }
+      .view-active {
+        opacity: 1;
+        pointer-events: auto;
+        transform: scale(1);
+      }
+
+      /* 面板布局：左侧表单，右侧日志（终端风格） */
+      .func-panel {
+        width: 900px;
+        height: 600px;
+        background: rgba(13, 17, 23, 0.95);
+        border: 1px solid var(--border);
+        border-radius: 15px;
+        display: flex;
+        box-shadow: 0 50px 100px rgba(0, 0, 0, 0.8);
+        position: relative;
+      }
+      .close-icon {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        font-size: 24px;
+        color: rgba(255, 255, 255, 0.3);
+        cursor: pointer;
+        transition: 0.3s;
+        z-index: 10;
+      }
+      .close-icon:hover {
+        color: #fff;
+        transform: rotate(90deg);
+        text-shadow: 0 0 10px #fff;
+      }
+      .panel-left {
+        flex: 4;
+        border-right: 1px solid var(--border);
+        padding: 40px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .panel-right {
+        flex: 3;
+        background: #000;
+        padding: 20px;
+        overflow-y: auto;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        color: #0f0;
+      }
+
+      /* 上传区：点击触发隐藏 input；预览图默认隐藏（preview() 中显示） */
+      .upload-area {
+        border: 2px dashed #444;
+        border-radius: 10px;
+        height: 180px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        transition: 0.3s;
+        margin: 20px 0;
+        background: rgba(255, 255, 255, 0.02);
+      }
+      .upload-area:hover {
+        border-color: var(--primary);
+        background: rgba(0, 242, 234, 0.05);
+      }
+      .upload-area img {
+        max-width: 100%;
+        max-height: 100%;
+        display: none;
+        border-radius: 5px;
+      }
+
+      /* 输入与按钮：保持暗色主题可读性与 hover 反馈 */
+      input[type="text"] {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid #444;
+        color: #fff;
+        padding: 12px;
+        border-radius: 6px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      input[type="text"]:focus {
+        outline: none;
+        border-color: var(--primary);
+      }
+      .btn {
+        width: 100%;
+        padding: 15px;
+        border: none;
+        border-radius: 6px;
+        font-weight: bold;
+        cursor: pointer;
+        letter-spacing: 1px;
+        transition: 0.3s;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: #000;
+      }
+      .btn-primary:hover {
+        box-shadow: 0 0 20px rgba(0, 242, 234, 0.5);
+      }
+      .btn-danger {
+        background: var(--secondary);
+        color: #fff;
+      }
+      .btn-danger:hover {
+        box-shadow: 0 0 20px rgba(255, 0, 80, 0.5);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 背景挂载点：Vanta.NET 会在此生成动态网格效果 -->
+    <div id="bg-canvas"></div>
+
+    <nav class="navbar">
+      <!-- 点击 logo 关闭任意全屏面板，回到首页视图 -->
+      <div class="logo" onclick="closeView()">
+        <i class="fas fa-cube"></i> 智影链 <span>Smart Shadow</span>
+      </div>
+
+      <!-- 导航滚动：使用 jQuery animate 平滑滚动到指定锚点 -->
+      <div class="nav-links">
+        <a
+          class="nav-item"
+          onclick="$('html,body').animate({ scrollTop: 0 }, 500)"
+          >首页</a
+        >
+        <a
+          class="nav-item"
+          onclick="
+            $('html,body').animate(
+              { scrollTop: $('#intro').offset().top - 100 },
+              500,
+            )
+          "
+          >项目介绍</a
+        >
+        <a
+          class="nav-item"
+          onclick="
+            $('html,body').animate(
+              { scrollTop: $('#tech').offset().top - 100 },
+              500,
+            )
+          "
+          >核心技术</a
+        >
+      </div>
+    </nav>
+
+    <div id="view-home">
+      <div class="hero-section">
+        <div class="hero-title animate__animated animate__fadeInDown">
+          数字资产<span style="color: var(--primary)">全生命周期</span>保护平台
+        </div>
+        <div class="hero-subtitle animate__animated animate__fadeInUp">
+          基于长安链 ChainMaker · IPFS 去中心化存储 · 多模态 AI 指纹
+        </div>
+
+        <div class="card-container">
+          <!-- 打开确权面板：openView 仅切换 class，不销毁 DOM -->
+          <div
+            class="nav-card card-blue animate__animated animate__zoomIn"
+            onclick="openView('view-register')"
+          >
+            <i class="fas fa-fingerprint"></i>
+            <h3>作品确权登记</h3>
+            <p>上传原创作品，生成 AI 深度指纹，一键上链存证。</p>
+          </div>
+
+          <!-- 打开监测面板：用于相似度比对与风险提示 -->
+          <div
+            class="nav-card card-red animate__animated animate__zoomIn"
+            style="animation-delay: 0.2s"
+            onclick="openView('view-check')"
+          >
+            <i class="fas fa-radar"></i>
+            <h3>全网侵权监测</h3>
+            <p>上传疑似侵权图，跨链检索比对，AI 独立诊断。</p>
+          </div>
+        </div>
+
+        <div
+          style="margin-top: 50px; opacity: 0.5; animation: bounce 2s infinite"
+        >
+          <i class="fas fa-chevron-down"></i> 向下滑动了解更多
+        </div>
+      </div>
+
+      <div id="intro" class="intro-section">
+        <h2 style="border-left: 5px solid var(--primary); padding-left: 15px">
+          核心技术栈
+        </h2>
+        <div class="tech-grid">
+          <div class="tech-item">
+            <h4 style="color: var(--primary)">
+              <i class="fas fa-brain"></i> AI 深度侦测
+            </h4>
+            <p>
+              集成 YOLOv8 目标检测与 ResNet18 特征提取，辅以 FFT
+              频域分析，精准识别 AIGC 伪影。
+            </p>
+          </div>
+          <div class="tech-item">
+            <h4 style="color: var(--primary)">
+              <i class="fas fa-link"></i> 长安链底层
+            </h4>
+            <p>
+              基于国产自主可控区块链
+              ChainMaker，实现版权信息的分布式存证，确保数据不可篡改。
+            </p>
+          </div>
+          <div class="tech-item">
+            <h4 style="color: var(--primary)">
+              <i class="fas fa-hdd"></i> IPFS 存储
+            </h4>
+            <p>
+              采用星际文件系统 (IPFS)
+              进行非结构化数据存储，实现内容寻址与去中心化分发。
+            </p>
+          </div>
+        </div>
+        <div
+          style="
+            text-align: center;
+            margin-top: 80px;
+            color: #666;
+            font-size: 12px;
+          "
+        >
+          &copy; 2025 Guo Bao Tegong Team. All Rights Reserved.
+        </div>
+      </div>
+    </div>
+
+    <!-- 确权全屏面板：左侧上传与备注，右侧输出日志 -->
+    <div id="view-register" class="fullscreen-view">
+      <div class="func-panel">
+        <div class="close-icon" onclick="closeView()">
+          <i class="fas fa-times"></i>
+        </div>
+        <div class="panel-left">
+          <h2 style="color: var(--primary); margin-top: 0">
+            <i class="fas fa-pen-nib"></i> 作品铸造
+          </h2>
+          <input
+            type="text"
+            id="noteInput"
+            placeholder="请输入作品名称 / 备注信息"
+          />
+          <div class="upload-area" onclick="$('#fileRegister').click()">
+            <i
+              class="fas fa-cloud-upload-alt"
+              style="font-size: 30px; margin-bottom: 10px; color: #888"
+            ></i>
+            <span style="color: #aaa">点击上传图片</span>
+            <img id="preview1" />
+          </div>
+          <input
+            type="file"
+            id="fileRegister"
+            accept="image/*"
+            onchange="preview(this, 'preview1')"
+            style="display: none"
+          />
+          <button class="btn btn-primary" onclick="doRegister()">
+            立即上链
+          </button>
+        </div>
+        <div class="panel-right" id="logRegister">> SYSTEM READY...</div>
+      </div>
+    </div>
+
+    <!-- 监测全屏面板：上传疑似图，输出相似度与告警弹窗 -->
+    <div id="view-check" class="fullscreen-view">
+      <div class="func-panel" style="border-color: rgba(255, 0, 80, 0.5)">
+        <div class="close-icon" onclick="closeView()">
+          <i class="fas fa-times"></i>
+        </div>
+        <div class="panel-left">
+          <h2 style="color: var(--secondary); margin-top: 0">
+            <i class="fas fa-search"></i> 侵权扫描
+          </h2>
+          <div
+            class="upload-area"
+            style="border-color: rgba(255, 0, 80, 0.3)"
+            onclick="$('#fileCheck').click()"
+          >
+            <i
+              class="fas fa-image"
+              style="
+                font-size: 30px;
+                margin-bottom: 10px;
+                color: var(--secondary);
+              "
+            ></i>
+            <span style="color: #aaa">上传疑似图</span>
+            <img id="preview2" />
+          </div>
+          <input
+            type="file"
+            id="fileCheck"
+            accept="image/*"
+            onchange="preview(this, 'preview2')"
+            style="display: none"
+          />
+          <button class="btn btn-danger" onclick="doCheck()">开始比对</button>
+        </div>
+        <div class="panel-right" id="logCheck" style="color: #ff99aa">
+          > MONITOR READY...
+        </div>
+      </div>
+    </div>
+
+    <script>
+      $(document).ready(function () {
+        // 用户名：优先从 localStorage 取；无值时使用 test_user 作为默认
+        var currentUser = localStorage.getItem("username") || "test_user";
+
+        // 确权：选择图片 + 备注（可空），POST 到 /register
+        window.doRegister = function () {
+          var fileInput =
+            document.getElementById("regImage") ||
+            document.querySelector('input[type="file"]');
+          if (!fileInput || !fileInput.files[0]) {
+            Swal.fire({
+              icon: "error",
+              title: "错误",
+              text: "请先选择要确权的图片",
+              background: "#222",
+              color: "#fff",
+            });
+            return;
+          }
+
+          var formData = new FormData();
+          formData.append("image", fileInput.files[0]);
+          formData.append("username", currentUser);
+
+          var noteInput =
+            document.getElementById("regNote") ||
+            document.querySelector('input[type="text"]');
+          formData.append("note", noteInput ? noteInput.value : "");
+
+          // 日志输出目标：右侧面板用于显示请求过程/结果
+          $("#logReg").html("> [INFO] 正在提交 AI 分析与上链，请稍候...");
+
+          $.ajax({
+            url: "/register",
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (res) {
+              // repeat_self：幂等提示（当前用户已登记过该作品）
+              if (res.status === "repeat_self") {
+                $("#logReg").html(
+                  `> [INFO] ALREADY REGISTERED.\n> TXID: ${res.tx_id}`,
+                );
+                Swal.fire({
+                  icon: "info",
+                  title: "重复登记",
+                  text: "您已拥有该作品的确权记录",
+                  background: "#222",
+                  color: "#fff",
+                  confirmButtonColor: "#00f2ea",
+                });
+              } else if (res.status === "success") {
+                // is_aigc：后端 AI 判定结果（用于前端展示）
+                var aiLabel = res.is_aigc ? "AI 生成" : "人类创作";
+                $("#logReg").html(
+                  `> [SUCCESS] 确权成功!\n> TXID: ${res.tx_id}\n> AI 判定: ${aiLabel}`,
+                );
+                Swal.fire({
+                  icon: "success",
+                  title: "确权成功",
+                  text: "作品已永久刻入智影链",
+                  background: "#222",
+                  color: "#fff",
+                  confirmButtonColor: "#00f2ea",
+                });
+              }
+            },
+            error: function (err) {
+              // 后端错误优先读取 responseJSON.error，否则给通用提示
+              var errorMsg = err.responseJSON
+                ? err.responseJSON.error
+                : "网络错误或请求超时";
+              $("#logReg").html(`> ERROR: {"error": "${errorMsg}"}`);
+              Swal.fire({
+                icon: "error",
+                title: "上链失败",
+                text: errorMsg,
+                background: "#222",
+                color: "#fff",
+              });
+            },
+          });
+        };
+
+        // 监测：上传疑似图，POST 到 /check，按 similarity 阈值弹窗提示
+        window.doCheck = function () {
+          var fileInput =
+            document.getElementById("checkImage") ||
+            document.querySelectorAll('input[type="file"]')[1];
+          if (!fileInput || !fileInput.files[0]) {
+            Swal.fire({
+              icon: "error",
+              title: "错误",
+              text: "请先选择要检测的图片",
+              background: "#222",
+              color: "#fff",
+            });
+            return;
+          }
+
+          var formData = new FormData();
+          formData.append("image", fileInput.files[0]);
+
+          $("#logCheck").html(
+            "> [SCANNING] 正在启动哈希与 AI 双引擎全网比对...",
+          );
+
+          $.ajax({
+            url: "/check",
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (res) {
+              var aiLabel =
+                res.current_img_info && res.current_img_info.is_aigc
+                  ? "🤖 AI 生成"
+                  : "📷 人类创作";
+              var objName = res.current_img_info
+                ? res.current_img_info.ai_object
+                : "未知";
+
+              $("#logCheck").html(
+                `> [SCANNING] 最高相似度: ${res.similarity}%\n> AI 检测主体: ${objName}`,
+              );
+
+              // 风险阈值：>=80 高风险；>=55 中风险；否则低风险
+              if (res.similarity >= 80) {
+                Swal.fire({
+                  icon: "warning",
+                  title: "发现高度疑似侵权",
+                  html: `链上匹配到高度相似资产！<br><br>最高相似度：<b style="color:#ff0050; font-size: 1.2em;">${res.similarity}%</b><br>原作持有者：${res.chain_data ? res.chain_data.owner : "未知"}`,
+                  background: "#222",
+                  color: "#fff",
+                  confirmButtonColor: "#ff0050",
+                });
+              } else if (res.similarity >= 55) {
+                Swal.fire({
+                  icon: "info",
+                  title: "存在版权风险",
+                  text: `检测到 ${res.similarity}% 的相似度，存在部分特征重合，建议人工核对。`,
+                  background: "#222",
+                  color: "#fff",
+                  confirmButtonColor: "#f39c12",
+                });
+              } else {
+                Swal.fire({
+                  icon: "success",
+                  title: "未发现版权风险",
+                  text: `当前库中最高相似度仅为: ${res.similarity}%`,
+                  background: "#222",
+                  color: "#fff",
+                  confirmButtonColor: "#00f2ea",
+                });
+              }
+            },
+            error: function (err) {
+              var errorMsg = err.responseJSON
+                ? err.responseJSON.error
+                : "网络错误或 AI 服务未响应";
+              $("#logCheck").html(`> ERROR: {"error": "${errorMsg}"}`);
+              Swal.fire({
+                icon: "error",
+                title: "检测失败",
+                text: errorMsg,
+                background: "#222",
+                color: "#fff",
+              });
+            },
+          });
+        };
+      });
+
+      // 视图控制：通过切换 view-active 控制全屏面板显示/隐藏
+      function openView(id) {
+        document.getElementById(id).classList.add("view-active");
+      }
+      function closeView() {
+        document
+          .querySelectorAll(".fullscreen-view")
+          .forEach((el) => el.classList.remove("view-active"));
+      }
+
+      // 预览：读取本地图片为 DataURL，并隐藏上传区占位图标/文字
+      function preview(input, imgId) {
+        if (input.files && input.files[0]) {
+          var reader = new FileReader();
+          reader.onload = function (e) {
+            document.getElementById(imgId).src = e.target.result;
+            document.getElementById(imgId).style.display = "block";
+            var parent = document.getElementById(imgId).parentElement;
+            parent.querySelector("i").style.display = "none";
+            parent.querySelector("span").style.display = "none";
+          };
+          reader.readAsDataURL(input.files[0]);
+        }
+      }
+    </script>
+  </body>
+</html>

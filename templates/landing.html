@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>智影链 下一代版权保护方案</title>
+
+    <!-- 外部依赖：图标/动画 + 背景特效所需 three.js 与 vanta.net（CDN） -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.net.min.js"></script>
+
+    <style>
+      /* 主题变量：主色与背景色集中管理，便于统一换肤 */
+      :root {
+        --primary: #00f2ea;
+        --bg: #0b0e14;
+      }
+
+      /* 全局：暗色背景 + 仅限制横向滚动，纵向自然滚动 */
+      body {
+        margin: 0;
+        font-family: "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: #fff;
+        overflow-x: hidden;
+      }
+
+      /* Vanta 背景容器：固定铺满并置于底层 */
+      #bg-canvas {
+        position: fixed;
+        z-index: -1;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* 顶部导航：fixed + blur，保证首屏视觉沉浸 */
+      .navbar {
+        padding: 20px 50px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: fixed;
+        width: 100%;
+        box-sizing: border-box;
+        z-index: 100;
+        backdrop-filter: blur(5px);
+      }
+      .logo {
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: 2px;
+      }
+      .logo span {
+        color: var(--primary);
+      }
+
+      /* 登录按钮：hover 反色 + 发光，作为唯一主 CTA（跳转 /login） */
+      .login-btn {
+        padding: 10px 25px;
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        border-radius: 20px;
+        text-decoration: none;
+        font-weight: bold;
+        transition: 0.3s;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .login-btn:hover {
+        background: var(--primary);
+        color: #000;
+        box-shadow: 0 0 20px rgba(0, 242, 234, 0.4);
+      }
+
+      /* Hero：首屏主标题 + 副标题 + 启动按钮 */
+      .hero {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 0 20px;
+      }
+      .hero h1 {
+        font-size: 64px;
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 4px;
+        text-shadow: 0 0 30px rgba(0, 242, 234, 0.3);
+      }
+      .hero p {
+        font-size: 20px;
+        color: #ccc;
+        margin: 20px 0 50px;
+        max-width: 800px;
+        line-height: 1.6;
+      }
+
+      /* 主按钮：渐变 + 阴影，用于快速进入系统（onclick 跳转 /login） */
+      .cta-btn {
+        padding: 18px 50px;
+        font-size: 20px;
+        background: linear-gradient(90deg, #00f2ea, #00c6ff);
+        color: #000;
+        border: none;
+        border-radius: 50px;
+        font-weight: 900;
+        cursor: pointer;
+        transition: 0.3s;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        box-shadow: 0 0 30px rgba(0, 242, 234, 0.4);
+      }
+      .cta-btn:hover {
+        transform: scale(1.05) translateY(-5px);
+        box-shadow: 0 10px 50px rgba(0, 242, 234, 0.6);
+      }
+
+      /* 特性区：三张卡片，展示 AI/链/存储三大能力 */
+      .features {
+        padding: 100px 10%;
+        background: rgba(0, 0, 0, 0.8);
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 40px;
+      }
+      .card {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 40px;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: 0.3s;
+      }
+      .card:hover {
+        transform: translateY(-10px);
+        border-color: var(--primary);
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .card i {
+        font-size: 50px;
+        color: var(--primary);
+        margin-bottom: 25px;
+      }
+      .card h3 {
+        font-size: 24px;
+        margin-bottom: 15px;
+      }
+      .card p {
+        color: #aaa;
+        line-height: 1.6;
+      }
+
+      /* 页脚：版权信息（静态文本） */
+      .footer {
+        padding: 40px;
+        text-align: center;
+        background: #05070a;
+        color: #666;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 背景挂载点：VANTA.NET 将在此渲染动态网格背景 -->
+    <div id="bg-canvas"></div>
+
+    <nav class="navbar animate__animated animate__fadeInDown">
+      <div class="logo">智影链 <span>Smart Shadow</span></div>
+      <a href="/login" class="login-btn"
+        ><i class="fas fa-user-astronaut"></i> 用户登录</a
+      >
+    </nav>
+
+    <section class="hero">
+      <h1 class="animate__animated animate__zoomIn">数字资产 · 深度确权</h1>
+      <p
+        class="animate__animated animate__fadeInUp"
+        style="animation-delay: 0.3s"
+      >
+        融合 <b>YOLOv8 + ResNet</b> 多模态 AI 算法与
+        <b>长安链 ChainMaker</b> 底层技术<br />
+        为 AIGC 时代的数字版权提供“源头识别-链上存证-全网监测”的一站式解决方案
+      </p>
+      <button
+        class="cta-btn animate__animated animate__fadeInUp"
+        style="animation-delay: 0.6s"
+        onclick="window.location.href = '/login'"
+      >
+        立即启动系统
+      </button>
+    </section>
+
+    <section class="features">
+      <div class="card">
+        <i class="fas fa-brain"></i>
+        <h3>AI 深度鉴伪</h3>
+        <p>
+          集成 FFT 频域分析与 YOLO 目标检测算法，精准识别 AIGC
+          生成伪影，提取抗几何攻击的语义指纹。
+        </p>
+      </div>
+      <div class="card">
+        <i class="fas fa-link"></i>
+        <h3>长安链共识</h3>
+        <p>
+          基于国产自主可控区块链底层，实现毫秒级确权存证，交易哈希全网可查，数据不可篡改。
+        </p>
+      </div>
+      <div class="card">
+        <i class="fas fa-server"></i>
+        <h3>IPFS 永续存储</h3>
+        <p>
+          采用星际文件系统 (IPFS)
+          进行非结构化数据存储，构建“链上哈希+链下原图”的双重去中心化架构。
+        </p>
+      </div>
+    </section>
+
+    <div class="footer">&copy; 2025 北京邮电大学 - 国宝特工团队研发</div>
+
+    <script>
+      // Vanta 背景初始化：颜色与页面主题色一致，参数用于控制网格密度与连线距离
+      VANTA.NET({
+        el: "#bg-canvas",
+        mouseControls: true,
+        touchControls: true,
+        gyroControls: false,
+        minHeight: 200.0,
+        minWidth: 200.0,
+        scale: 1.0,
+        scaleMobile: 1.0,
+        color: 0x00f2ea,
+        backgroundColor: 0x0b0e14,
+        points: 12.0,
+        maxDistance: 23.0,
+        spacing: 18.0,
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,35 @@
+chain_client:
+  # 链ID（需与链端配置一致）
+  chain_id: "chain1"
+  # 组织ID（当前客户端所属组织）
+  org_id: "wx-org1.chainmaker.org"
+
+  # 交易签名材料：部署合约/发送交易通常使用管理员证书与私钥
+  user_key_file_path: "./crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.tls.key"
+  user_crt_file_path: "./crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.tls.crt"
+  user_sign_key_file_path: "./crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key"
+  user_sign_crt_file_path: "./crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt"
+
+  retry_limit: 10
+  retry_interval: 500
+
+  rpc_client:
+    # gRPC 超时：部署/管理类交易可能耗时较长，可适当放宽
+    send_tx_timeout: 180
+    get_tx_timeout: 180
+    # gRPC 消息大小上限（单位 MB）
+    max_receive_message_size: 64
+    max_send_message_size: 64
+
+  nodes:
+    - # 节点地址（IP:端口）
+      node_addr: "127.0.0.1:12301"
+      conn_cnt: 10
+      # TLS：启用双向认证时需配置 trust_root_paths 与 tls_host_name
+      enable_tls: true
+      trust_root_paths:
+        - "./crypto-config/wx-org1.chainmaker.org/ca"
+        - "./crypto-config/wx-org2.chainmaker.org/ca"
+        - "./crypto-config/wx-org3.chainmaker.org/ca"
+        - "./crypto-config/wx-org4.chainmaker.org/ca"
+      tls_host_name: "chainmaker.org"
