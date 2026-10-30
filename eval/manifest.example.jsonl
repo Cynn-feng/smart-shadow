@@ -1,0 +1,3 @@
+{"sample_id":"demo-real-001","group_id":"demo-source-001","split":"train","origin":"camera_photo","generator_family":"none","license":"synthetic-example","sample_path":"private://demo-real-001.jpg","postprocess_chain":[]}
+{"sample_id":"demo-ai-001","group_id":"demo-ai-source-001","split":"train","origin":"ai_full","generator_family":"synthetic-example-model","license":"synthetic-example","sample_path":"private://demo-ai-001.jpg","postprocess_chain":[]}
+{"sample_id":"demo-edit-001","group_id":"demo-edit-source-001","split":"test","origin":"ai_edit","generator_family":"synthetic-example-model","license":"synthetic-example","sample_path":"private://demo-edit-001.jpg","edit_mask":"private://demo-edit-001.mask.json","postprocess_chain":["jpeg:q75"]}

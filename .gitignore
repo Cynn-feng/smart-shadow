@@ -1,0 +1,34 @@
+# Python and local runtime
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+uploads/
+temp_api_*
+faiss.index
+faiss_meta.pkl
+*.log
+*.db
+*.sqlite
+*.sqlite3
+*.pem
+*.key
+*.crt
+*.p12
+runs/
+checkpoints/
+models/
+eval/results/
+
+# Local configuration and credentials
+.env
+.env.*
+crypto-config/
+contract/fact
+contract/fact.7z
+
+# Tooling and OS files
+.DS_Store
+.idea/
+.vscode/

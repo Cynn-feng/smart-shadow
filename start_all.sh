@@ -8,7 +8,7 @@ CHAIN_VERSION="v2.3.7"
 
 # 👇 【新增】在这里填写你虚拟环境的 Python 执行文件的相对或绝对路径
 # 常见例子： "venv/bin/python" 或 ".venv/bin/python" 或 "env/bin/python"
-PYTHON_EXEC="venv/bin/python" 
+PYTHON_EXEC="venv/bin/python"
 
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -24,7 +24,7 @@ echo -e "${BLUE}=================================================${NC}"
 cleanup() {
     echo ""
     echo -e "${RED}>>> 🛑 检测到退出信号，正在清理所有服务...${NC}"
-    
+
     # 1. 清理 IPFS 和 Python AI 进程
     if [ -n "$IPFS_PID" ]; then kill -9 $IPFS_PID 2>/dev/null; fi
     if [ -n "$PY_PID" ]; then kill -9 $PY_PID 2>/dev/null; fi

@@ -1,0 +1,4 @@
+# Pinned only for the real-image adapter and its reproducible evaluation.
+# These packages are not imported by the competition-era Go/AI service.
+Pillow==12.3.0
+numpy==2.5.3
